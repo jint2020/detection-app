@@ -1,66 +1,97 @@
-<script setup>
-import { ref,onMounted } from 'vue'
+<template>
+  <h1>{{ msg }}</h1>
+  <!-- 
+  <div class="card">
+    <van-button type="primary" @click="clickOk(true)"> 拍照</van-button>
+  </div> -->
+  <div class="card">
+    <van-button type="primary" @click="getDeviceInfo"> 设备信息</van-button>
+  </div>
+  <div class="card">
+    {{ deviceInfo.brand_name }}
+    {{ deviceInfo.company_name }}
+    {{ deviceInfo.credit_code }}
+  </div>
+  <div class="card">
+    <van-button type="primary" @click="readIdCard">读取证件</van-button>
+  </div>
 
+  <div class="card">
+    <van-button type="primary" @click="showDialog"> dialog</van-button>
+  </div>
+  <van-dialog v-model:show="show" title="标题" width="auto" show-cancel-van-button>
+    <canvas alt='' id='checkPicID' class="checkImg" style="width: 100%; height: 100%; display: block;"></canvas>
+    <div class="card">
+      <van-button type="primary" @click="clickOk(true)"> 拍照 </van-button>
+    </div>
+  </van-dialog>
+</template>
+
+
+<script setup>
+import { ref, onMounted, reactive } from 'vue'
+import { getDeviceInfoByHand, masterTakePhotoEvent, readServiceAbility, getVideoEvent, readCardExEvent } from '../utils/device/index.js'
+import { showNotify } from 'vant';
 defineProps({
   msg: String,
 })
 
-import { getDeviceInfoByHand,masterTakePhotoEvent,readServiceAbility,getVideoEvent } from '../utils/device/index.js'
-  const clickOk = (e) =>{
-    console.log(e);
-    const isClose = false;
-    masterTakePhotoEvent(isClose)
-  }
+const deviceInfo = reactive({
+  brand_name: '',
+  company_name: '',
+  credit_code: ''
+});
+
+const getDeviceInfo = (event) => {
+
+  getDeviceInfoByHand().then((res) => {
+    if (res.code === 0) {
+      showNotify({ type: 'success', message: '获取设备信息成功' });
+      // result.camera_info
+      const result = res.result;
+      if (result.camera_info.length > 0) {
+        const { brand_name, company_name, credit_code } = result.camera_info[0];
+        deviceInfo.brand_name = brand_name
+        deviceInfo.company_name = company_name
+        deviceInfo.credit_code = credit_code
+      }
+    }
+  }).catch((err) => {
+    console.log(err);
+
+  })
+}
+
+const readIdCard = () => {
+  readCardExEvent().then((res) => {
+    if (res.code === 0) {
+      showNotify({ type: 'success', message: '读取成功' });
+    } else {
+      showNotify({ type: 'danger', message: '读取成功失败-1' });
+    }
+  }).catch((err) => {
+    showNotify({ type: 'danger', message: '读取成功失败' });
+  });
+}
+
+const clickOk = (e) => {
+  console.log(e);
+  const isClose = false;
+  masterTakePhotoEvent(isClose)
+}
 
 const show = ref(false)
 
-const showDialog =(e)=> {
+const showDialog = (e) => {
   show.value = true;
   getVideoEvent(0);
 }
 
-onMounted(()=>{
+onMounted(() => {
   readServiceAbility()
 })
 
 </script>
-
-<template>
-  <h1>{{ msg }}</h1>
-
-  <div class="card">
-    <button type="button" @click="clickOk(true)"> 拍照</button>
-  </div>
-  <div class="card">
-    <button type="button" @click="getDeviceInfoByHand"> 设备信息</button>
-  </div>
-
-  
-  <div class="card">
-    <button type="button" @click="showDialog"> dialog</button>
-  </div>
-  <van-dialog v-model:show="show" title="标题" width="auto" show-cancel-button>
-    <canvas alt='' id='checkPicID' class="checkImg" style="width: 100%; height: 100%; display: block;"></canvas>
-    <div class="card">
-    <button type="button" @click="clickOk(true)"> 拍照</button>
-  </div>
-  </van-dialog>
-  <p>
-    Check out
-    <a href="https://vuejs.org/guide/quick-start.html#local" target="_blank"
-      >create-vue</a
-    >, the official Vue + Vite starter
-  </p>
-  <p>
-    Learn more about IDE Support for Vue in the
-    <a
-      href="https://vuejs.org/guide/scaling-up/tooling.html#ide-support"
-      target="_blank"
-      >Vue Docs Scaling up Guide</a
-    >.
-  </p>
-  <p class="read-the-docs">Click on the Vite and Vue logos to learn more</p>
-</template>
 
 <style scoped>
 .read-the-docs {

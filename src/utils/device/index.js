@@ -1,6 +1,4 @@
-import service from "./service";
-import { masterTakePhoto } from "./service";
-// takePhoto.tpMasterTakePhoto
+import service from './service';
 console.log("service", service);
 
 //视频参数
@@ -242,7 +240,6 @@ export function masterTakePhotoEvent(isClose) {
         // console.log("主头拍照返回", retcode);
         if (retcode.err_code == 0) {
             if (!showPicStatus) {
-
                 if (isClose) {
                     // 关闭弹窗
                     closeVideoDialog();
@@ -296,13 +293,23 @@ export function takePhotoAndPrintBase64(isClose) {
 }
 
 export function getDeviceInfoByHand() {
-    service.getDevInfo(function (retcode) {
-        if (retcode.statuCode === 0) {
-            console.log("成功获取信息", retcode);
-        } else {
-            console.error("获取设备信息失败:", retcode);
-        }
-    })
+    return new Promise((resolve, reject) => {
+        service.getDevInfo(function (retcode) {
+            if (retcode.statuCode === 0) {
+                resolve({
+                    code: 0,
+                    result: retcode,
+                    msg: ''
+                });
+            } else {
+                reject({
+                    code: 0,
+                    result: null,
+                    msg: 'error'
+                });
+            }
+        });
+    });
 }
 
 // 分离式读证
@@ -316,32 +323,28 @@ export function readCardExEvent() {
         // console.log("秘钥的返回", retcode);
         console.log("设置秘钥：" + JSON.stringify(retcode));
         if (retcode.resultFlag == 0) {
-            service.readCardEx(function (retcode) {
-                // console.log("读证返回", retcode);
-                if (retcode.resultFlag == 0) {
-                    //仅证件信息
-                    // textarea.value += "读证：" + retcode.resultContent + "\r\n";
-                    var idInfoJson = JSON.parse(retcode.resultContent);
-                    idInfoJson = JSON.stringify(idInfoJson, null, 2);
-                    readCertResult(JSON.parse(retcode.resultContent).photo, retcode.photoFront, retcode.photoBack);
-                    textarea.value += "读证：" + idInfoJson + "\r\n";
-                    //全部返回(包含合成图数据)
-                    // textarea.value += "读证：" + JSON.stringify(retcode) + "\r\n";
-                } else {
-                    textarea.value += "读证：" + JSON.stringify(retcode) + "\r\n";
-                }
-            });
+            return new Promise((resolve, reject) => {
+                service.readCardEx(function (retcode) {
+                    // console.log("读证返回", retcode);
+                    if (retcode.resultFlag == 0) {
+                        resolve({
+                            code:0,
+                            result:{
+                                idInfo: JSON.parse(retcode.resultContent),
+                                photoFront: retcode.photoFront,
+                                photoBack: retcode.photoBack,
+                            },
+                            msg:''
+                        })
+                    } else {
+                        reject({
+                            code: -1,
+                            result:null,
+                            msg:retcode.err_msg,
+                        })
+                    }
+                });  
+            })
         }
     });
-}
-
-function readCertResult(headImage, forwardImage, backImage) {
-
-    downloadFile()
-    var cert_photo = document.getElementById("cert_photo");
-    cert_photo.src = "data:image/jpeg;base64," + headImage;
-    var cert_photo_f = document.getElementById("cert_photo_forward");
-    cert_photo_f.src = "data:image/jpeg;base64," + forwardImage;
-    var cert_photo_b = document.getElementById("cert_photo_back");
-    cert_photo_b.src = "data:image/jpeg;base64," + backImage;
 }
