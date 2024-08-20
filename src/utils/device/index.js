@@ -1,5 +1,24 @@
 import service from './service';
-console.log("service", service);
+
+// 签字
+let  canvasSign,ctxSign, checkStatus;
+let signType = 0;//0 白屏签名 1 PDF，图片签名  2 html签名
+// 画板宽高
+var iWidth = 800;
+var iHeight = 490;
+//设备宽高
+var deviceHeight = 0,
+    deviceWidth = 0,
+    deviceX = 0,
+    deviceY = 0;
+var startSign = false; // 签字状态
+var isFirst = false; //签字状态
+var signData = "";
+var signFileType = "";
+var signUrl = "";
+var points = [];
+var beginPoint = null;
+let isDown = true;
 
 //视频参数
 let videoParams = {
@@ -9,6 +28,10 @@ let videoParams = {
     video_frame_w: 0,
     video_frame_h: 0,
 };
+let showPicStatus = false;
+const fileType = "jpeg";
+let photoTemp = '';
+const photoFix = "photo_";
 /**
  *  、、
  */
@@ -30,6 +53,8 @@ export function readServiceAbility() {
     })
 }
 
+
+
 // 显示支持功能的按钮
 function showAbilityButton(ability) {
     let abilityList = ability.split("|");
@@ -45,13 +70,10 @@ export function getVideoEvent(cameraType) {
     };
     console.log("哪个摄像头", cameraType);
     videoParams.cameraType = cameraType;
-
-    let checkPicID = document.getElementById("checkPicID"); //视频
-    let photoID = document.getElementById("photoID"); //拍照
-    // checkPicID.style.display = "none";
-    // photoID.style.display = "none";
     mmasterOpenVideoEvent();
 }
+
+// 打开视频流
 function mmasterOpenVideoEvent() {
     //获取设备信息
     service.getVideoInfo(function (retcode) {
@@ -62,10 +84,10 @@ function mmasterOpenVideoEvent() {
             var cameraInfo = retcode.data;
             console.log("videoParams.cameraType", videoParams.cameraType);
             if (-1 == videoParams.cameraType) {
-                // for (var i = 0; i < cameraInfo.length; i++) {
-                //     device_select.options[i] = new Option(cameraInfo[i].camera_name, cameraInfo[i].camera_type);
-                // }
-                // videoParams.cameraType = device_select.value;
+                for (var i = 0; i < cameraInfo.length; i++) {
+                    device_select.options[i] = new Option(cameraInfo[i].camera_name, cameraInfo[i].camera_type);
+                }
+                videoParams.cameraType = device_select.value;
             }
 
             for (var i = 0; i < cameraInfo.length; i++) {
@@ -193,6 +215,45 @@ function mmasterOpenVideoEvent() {
         }
     });
 }
+// 副头拍照
+export function slaveTakePhotoEvent(isClose) {
+    // console.log("状态", openStatus);
+    if (!openStatus) {
+        alert("视频正在播放中，请稍候！！");
+        return false;
+    }
+    compress_size = parseInt(document.getElementById("compress_size").value);
+    margins = parseInt(document.getElementById("margins").value);
+
+    service.slaveTakePhoto(text, is_compress, compress_size, margins, rotate_angle, is_cut, function (retcode) {
+        // console.log("副头拍照返回", retcode);
+        if (retcode.err_code == 0) {
+            if (!showPicStatus) {
+                textarea.value += "副头拍照：拍照成功";
+                var checkPicID = document.getElementById("checkPicID"); //视频
+
+                if (isClose) {
+                    // 关闭视频链接
+                    // closeVideoDialog();
+                }
+                //下载图片
+                var content = "data:image/" + fileType + ";base64," + retcode.data;
+                photoTemp = retcode.data;
+                // 显示照片base64
+                // textarea.value += photoTemp + "\r\n";
+
+                var myDate = new Date();
+                var hh = myDate.getHours(); //获取系统时，
+                var mm = myDate.getMinutes(); //分
+                var ss = myDate.getSeconds(); //秒
+                var fileName = photoFix + hh + mm + ss;
+                downloadFile(content, fileName);
+            }
+        } else {
+            closeVideoDialog();
+        }
+    });
+}
 export function closeVideoDialog() {
     service.closeVideo(function (res) {
         console.log("关闭视频", res);
@@ -223,7 +284,7 @@ function downloadFile(content, fileName) {
     aLink.click();
 }
 
-// expected isClose === false to open capture a photo
+// 主头拍照
 export function masterTakePhotoEvent(isClose) {
     if (!openStatus) {
         alert("视频正在播放中，请稍候！！");
@@ -241,12 +302,11 @@ export function masterTakePhotoEvent(isClose) {
         if (retcode.err_code == 0) {
             if (!showPicStatus) {
                 if (isClose) {
-                    // 关闭弹窗
-                    closeVideoDialog();
+                    // 关闭视频链接
+                    // closeVideoDialog();
                 }
                 //下载图片
                 var content = "data:image/" + fileType + ";base64," + retcode.data;
-                console.log(content);
                 photoTemp = retcode.data;
 
                 // 显示照片base64
@@ -259,38 +319,16 @@ export function masterTakePhotoEvent(isClose) {
                 var fileName = photoFix + hh + mm + ss;
 
                 downloadFile(content, fileName);
-
             }
         } else {
-            closeVideoDialog();
+            // 可选择是否断开websocket链接
+            // closeVideoDialog();
+            console.log("可选择是否断开websocket链接");
+            
         }
     });
 }
 
-
-export function takePhotoAndPrintBase64(isClose) {
-
-    const text = "mask_text"; // 如果需要的话，可以从其他地方获取这个值
-    const is_compress = 0; //拍照是否压缩：0-否，1-是
-    const compress_size = 200; //拍照压缩目标大小（单位：KB）
-    const margins = 5; // 默认值或者从其他地方获取
-    const rotate_angle = 0; //拍照角度 0-0 1-90 2-180 3-270
-    const is_cut = 0; //拍照是否裁剪  0-不裁剪  1-自动裁剪
-
-
-    service.masterTakePhoto(text, is_compress, compress_size, margins, rotate_angle, is_cut, function (retcode) {
-        if (retcode.statuCode === 0) {
-            const base64Data = retcode.data;
-            console.log("Base64 Data:", base64Data);
-
-            if (isClose) {
-                // 这里可以添加关闭视频的逻辑，如果需要的话
-            }
-        } else {
-            console.error("拍照失败:", retcode);
-        }
-    });
-}
 
 export function getDeviceInfoByHand() {
     return new Promise((resolve, reject) => {

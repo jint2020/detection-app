@@ -1,5 +1,6 @@
 import takePhoto from "./takePhoto";
 import readCert from "./readcert";
+import sign from "./sign";
 import serviceutil from "./serviceWebsocket";
 console.log("takePhoto ", takePhoto);
 

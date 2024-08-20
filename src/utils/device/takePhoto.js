@@ -3,6 +3,8 @@ console.log('cesi', videoutil.videoWsStatus);
 
 
 let err_code = null;
+let err_msg = null;
+let data = null;
 const takePhoto = {
     videoParams: {
         camera_type: 0,
